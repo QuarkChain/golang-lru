@@ -3,6 +3,8 @@ package simplelru
 import (
 	"fmt"
 	"testing"
+
+	"gotest.tools/assert"
 )
 
 func TestLRUWithAccounting(t *testing.T) {
@@ -83,4 +85,31 @@ func TestLRUWithAccounting(t *testing.T) {
 	if _, ok := l.Get(8); ok {
 		t.Fatalf("should contain nothing")
 	}
+}
+
+func TestLRUWithAccounting_update(t *testing.T) {
+	evictCounter := 0
+	onEvicted := func(k interface{}, v interface{}) {
+		evictCounter++
+	}
+	onAccount := func(k interface{}, v interface{}) int {
+		return len(k.(string)) + len(v.([]byte))
+	}
+	l, err := NewLRUWithAccounting(20, onAccount, onEvicted)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	for i := 0; i < 10; i++ {
+		l.Add(fmt.Sprint(i), []byte(fmt.Sprint(i)))
+	}
+
+	assert.Equal(t, evictCounter, 0)
+
+	// update
+	for i := 0; i < 10; i++ {
+		l.Add(fmt.Sprint(i), []byte(fmt.Sprint(i+100)))
+	}
+
+	assert.Equal(t, evictCounter, 14)
 }

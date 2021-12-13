@@ -51,8 +51,11 @@ func (c *LRUWithAccounting) Add(key, value interface{}) (evicted bool) {
 	// Check for existing item
 	if ent, ok := c.items[key]; ok {
 		c.evictList.MoveToFront(ent)
+		c.size -= c.onAccount(ent.Value.(*entry).key, ent.Value.(*entry).value)
 		ent.Value.(*entry).value = value
-		return false
+		c.size += c.onAccount(ent.Value.(*entry).key, ent.Value.(*entry).value)
+
+		return c.evictIfNeeded()
 	}
 
 	// Add new item
